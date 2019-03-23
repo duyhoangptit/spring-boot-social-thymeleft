@@ -210,4 +210,9 @@ public class UserController {
 		return "redirect:/userInfo";
 	}
 
+	@RequestMapping(value = { "/logout-successful-page" }, method = RequestMethod.GET)
+	public String logout() {
+		return "logout-successful-page";
+	}
+
 }

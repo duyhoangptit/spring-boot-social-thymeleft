@@ -3,6 +3,8 @@
  */
 package vn.tiger.social.config;
 
+import javax.sql.DataSource;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Configurable;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +14,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.web.authentication.rememberme.InMemoryTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.JdbcTokenRepositoryImpl;
+import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.social.security.SpringSocialConfigurer;
 
 import vn.tiger.social.entity.AppRole;
@@ -27,6 +32,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
 	@Autowired
 	private UserDetailsService userDetailsService;
+
+	@Autowired
+	private DataSource dataSource;
 
 	@Autowired
 	public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
@@ -60,10 +68,15 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 				.usernameParameter("username").passwordParameter("password");
 
 		// Logout config
-		http.authorizeRequests().and().logout().logoutUrl("/logout").logoutSuccessUrl("/");
+		http.authorizeRequests().and().logout().logoutUrl("/logout").logoutSuccessUrl("/logout-successful-page");
+
+		// Remember me
+		http.authorizeRequests().and().rememberMe().tokenRepository(this.persistentTokenRepository())
+				.tokenValiditySeconds(1 * 24 * 60 * 60);// 24h
 
 		// Spring socical config
 		http.apply(new SpringSocialConfigurer()).signupUrl("/signup");
+
 	}
 
 	@Override
@@ -75,5 +88,21 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 	@Bean
 	public static BCryptPasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
+	}
+
+	// Token stored in Table
+	@Bean
+	public PersistentTokenRepository persistentTokenRepository() {
+		JdbcTokenRepositoryImpl db = new JdbcTokenRepositoryImpl();
+		db.setDataSource(dataSource);
+
+		return db;
+	}
+
+	// Token stored in Memory Server
+	@Bean
+	public PersistentTokenRepository persistentTokenRepositoryM() {
+		InMemoryTokenRepositoryImpl memory = new InMemoryTokenRepositoryImpl();
+		return memory;
 	}
 }
